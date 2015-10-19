@@ -5,6 +5,7 @@
   imageLoader.addEventListener('change', handleImage, false);
   var canvas = document.querySelector('#image');
   var ctx = canvas.getContext('2d');
+  var imageWorker = new Worker('scripts/worker.js');
 
   function handleImage(e){
     var reader = new FileReader();
@@ -15,9 +16,9 @@
         canvas.height = img.height;
         ctx.drawImage(img,0,0);
         original = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      }
+      };
       img.src = event.target.result;
-    }
+    };
     reader.readAsDataURL(e.target.files[0]);
   }
 
@@ -27,11 +28,11 @@
     var buttons = document.querySelectorAll('button');
     for (var i = 0; i < buttons.length; i++) {
       if (buttons[i].hasAttribute('disabled')) {
-        buttons[i].removeAttribute('disabled')
+        buttons[i].removeAttribute('disabled');
       } else {
         buttons[i].setAttribute('disabled', null);
       }
-    };
+    }
   }
 
   function manipulateImage(type) {
@@ -42,8 +43,24 @@
 
     // Hint! This is where you should post messages to the web worker and
     // receive messages from the web worker.
+    worker.postMessage({'imageData': imageData, 'type': type});
 
-    length = imageData.data.length / 4;
+    imageWorker.onmessage = function(e) {
+      toggleButtonsAbledness();
+      var image = e.data;
+      if (image) return ctx.putImageData(e.data, 0, 0);
+      console.log("No manipulated image returned.");
+    };
+
+    imageWorker.onerror = function(error) {
+      function WorkerException(message) {
+        this.name = "WorkerException";
+        this.message = message;
+      }
+      throw new WorkerException('Worker Error.');
+    };
+
+    /*length = imageData.data.length / 4;
     for (i = j = 0, ref = length; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
       r = imageData.data[i * 4 + 0];
       g = imageData.data[i * 4 + 1];
@@ -56,8 +73,8 @@
       imageData.data[i * 4 + 3] = pixel[3];
     }
     toggleButtonsAbledness();
-    return ctx.putImageData(imageData, 0, 0);
-  };
+    return ctx.putImageData(imageData, 0, 0);*/
+  }
 
   function revertImage() {
     return ctx.putImageData(original, 0, 0);
